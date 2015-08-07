@@ -99,7 +99,7 @@ int FrameExtractor::process()
 
 				system(("mkdir \"" + ss.str() + "\"").c_str());
 
-				ss << separator() << setw(countDigits) << setfill('0') << curFrame << ".png";
+				ss << separator() << *name << "_" << setw(countDigits) << setfill('0') << curFrame << ".png";
 
 				// save file
 				cv::imwrite(ss.str(), image);
