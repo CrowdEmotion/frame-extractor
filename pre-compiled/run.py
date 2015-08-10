@@ -13,8 +13,8 @@ def copyFolderContents(src, dest):
 
     for file_name in onlyfiles:
         file_path = join(src, file_name)
-        #if not exists(file_path):
-        shutil.copy(file_path, dest)
+        if not exists(join(dest, file_name)):
+            shutil.copy(file_path, dest)
 
 
 # main
@@ -46,8 +46,8 @@ if __name__ == '__main__':
             print "file " + file_path + " does not have a dfile"
             continue;
         
-        if file_name in dict and dict[file_name] == getmtime(file_path):
-            if dfile_name in dict and dict[dfile_name] == getmtime(file_path):
+        if file_name in dict and dict[file_name] == str(getmtime(file_path)):
+            if dfile_name in dict and dict[dfile_name] == str(getmtime(dfile_path)):
                 print "ignored file: " + file_path + " because it's not new"
                 continue;
         if subp.call(["fe.exe", file_path, dfile_path]) == 0:
