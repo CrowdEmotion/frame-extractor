@@ -3,6 +3,8 @@
 #include <iostream>
 #include <iomanip>
 #include "Util.h"
+#include <sys/types.h>
+#include <sys/stat.h>
 
 using namespace std;
 
@@ -97,7 +99,22 @@ int FrameExtractor::process()
 				ostringstream ss;
 				ss << *path << "frames" << separator() << *name << separator() << frames[i].type;
 
-				system(("mkdir \"" + ss.str() + "\"").c_str());
+				struct stat info;
+
+				if (stat(ss.str().c_str(), &info) != 0)
+				{
+					// printf("cannot access %s\n", pathname);
+					system(("mkdir \"" + ss.str() + "\"").c_str());
+				}
+				else if (info.st_mode & S_IFDIR)  // S_ISDIR() doesn't exist on my windows 
+				{
+					// printf("%s is a directory\n", pathname);
+				}
+				else
+				{
+					// printf("%s is no directory\n", pathname);
+					system(("mkdir \"" + ss.str() + "\"").c_str());
+				}
 
 				ss << separator() << *name << "_" << setw(countDigits) << setfill('0') << curFrame << ".png";
 
@@ -175,5 +192,11 @@ int FrameExtractor::readDFile()
 	}
 
 	infile.close();
+
+	if (frames.size() == 0)
+	{
+		return 4;
+	}
+
 	return 0;
 }
