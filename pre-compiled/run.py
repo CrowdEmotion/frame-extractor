@@ -16,12 +16,26 @@ def copyFolderContents(src, dest):
         if not exists(join(dest, file_name)):
             shutil.copy(file_path, dest)
 
+def collectResults(results, collection):
+    folders = [ f for f in listdir(results) if not isfile(join(results,f)) ]
+
+    for folder_name in folders:
+        folder_path = join(results, folder_name)
+        subfolders = [ f for f in listdir(folder_path) if not isfile(join(folder_path,f)) ]
+
+        for subf_name in subfolders:
+            src = join(folder_path, subf_name)
+            dst = join(collection, subf_name)
+
+            copyFolderContents(src, dst)
 
 # main
 if __name__ == '__main__':
-    data = "data/"
-    frames = join(data, "frames/")
-    agregate = "agregates/"
+    data = "data"
+    static = join(data, "static")
+    sequence = join(data, "sequence")
+    staticResults = join("results", "static")
+    sequenceResults = join("results", "sequence")
     persistent = "dictionary.csv"
     dict = {}
 
@@ -60,17 +74,8 @@ if __name__ == '__main__':
         for key, val in dict.items():
             w.writerow([key, val])
 
-    folders = [ f for f in listdir(frames) if not isfile(join(frames,f)) ]
-
-    for folder_name in folders:
-        folder_path = join(frames, folder_name)
-        subfolders = [ f for f in listdir(folder_path) if not isfile(join(folder_path,f)) ]
-
-        for subf_name in subfolders:
-            src = join(folder_path, subf_name)
-            dst = join(agregate, subf_name)
-
-            copyFolderContents(src, dst)
+    collectResults(static, staticResults)
+    collectResults(sequence, sequenceResults)
 
     subp.call(["java", "-jar", join(data, "SyncSSH/SyncSSH.jar"), "upload", join(data, "SyncSSH")])
 
