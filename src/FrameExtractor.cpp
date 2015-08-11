@@ -5,6 +5,10 @@
 #include "Util.h"
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <cmath>
+
+static const int ADIACENT_FRAMES = 2;
+static const int WINDOW_SIZE = ADIACENT_FRAMES + 1 + ADIACENT_FRAMES;
 
 using namespace std;
 
@@ -69,7 +73,7 @@ int FrameExtractor::process()
 	int64 lastTick = cv::getTickCount(), tickDiff = 1;
 	double tickFrequency = cv::getTickFrequency();
 
-	cv::Mat image;
+	circular_list<video_frame> buffer(ADIACENT_FRAMES + 2);
 
 	while (true)
 	{
@@ -86,8 +90,11 @@ int FrameExtractor::process()
 			}
 		}
 
+		cv::Mat image;
 		if (capture->read(image))
 		{
+			buffer.push(video_frame(image, position, curFrame));
+
 			int64 tick = cv::getTickCount();
 			tickDiff = tick - lastTick;
 			lastTick = tick;
@@ -95,31 +102,55 @@ int FrameExtractor::process()
 
 			if (frames[i].start < position && position < frames[i].end)
 			{
+				circular_list<video_frame> writeBuffer(WINDOW_SIZE);
+				writeBuffer.push(buffer);
 
-				ostringstream ss;
-				ss << *path << "frames" << separator() << *name << separator() << frames[i].type;
+				double lastDist = abs(position - frames[i].mid);
 
-				struct stat info;
+				position = capture->get(CV_CAP_PROP_POS_MSEC) / 1000;
+				curFrame = (int64)capture->get(CV_CAP_PROP_POS_FRAMES);
 
-				if (stat(ss.str().c_str(), &info) != 0)
+				double dist = abs(position - frames[i].mid);
+
+				while (dist < lastDist)
 				{
-					// printf("cannot access %s\n", pathname);
-					system(("mkdir \"" + ss.str() + "\"").c_str());
-				}
-				else if (info.st_mode & S_IFDIR)  // S_ISDIR() doesn't exist on my windows 
-				{
-					// printf("%s is a directory\n", pathname);
-				}
-				else
-				{
-					// printf("%s is no directory\n", pathname);
-					system(("mkdir \"" + ss.str() + "\"").c_str());
+					position = capture->get(CV_CAP_PROP_POS_MSEC) / 1000;
+					curFrame = (int64)capture->get(CV_CAP_PROP_POS_FRAMES);
+
+					lastDist = dist;
+					dist = abs(position - frames[i].mid);
+
+					cv::Mat image_1;
+					if (capture->read(image_1))
+					{
+						buffer.push(video_frame(image_1, position, curFrame));
+						writeBuffer.push(video_frame(image_1, position, curFrame));
+					}
+					else
+					{
+						break;
+					}
 				}
 
-				ss << separator() << *name << "_" << setw(countDigits) << setfill('0') << curFrame << ".png";
+				for (int j = 0; j < ADIACENT_FRAMES; j++)
+				{
+					position = capture->get(CV_CAP_PROP_POS_MSEC) / 1000;
+					curFrame = (int64)capture->get(CV_CAP_PROP_POS_FRAMES);
 
-				// save file
-				cv::imwrite(ss.str(), image);
+					cv::Mat image_2;
+					if (capture->read(image_2))
+					{
+						buffer.push(video_frame(image_2, position, curFrame));
+						writeBuffer.push(video_frame(image_2, position, curFrame));
+					}
+					else
+					{
+						break;
+					}
+				}
+
+				writeFrame(writeBuffer.getMid(), frames[i].type, countDigits);
+				writeWindow(writeBuffer.getList(), frames[i].type, countDigits);
 
 				i++;
 				if (i >= frames.size())
@@ -143,6 +174,73 @@ int FrameExtractor::process()
 stop:
 	cout << '\r' << "100% processed                     " << endl;
 	return 0;
+}
+
+void FrameExtractor::writeFrame(video_frame &v_frame, string &type, int digitCount)
+{
+	ostringstream ss;
+	ss << *path << "static" << separator() << *name << separator() << type;
+
+	struct stat info;
+
+	if (stat(ss.str().c_str(), &info) != 0)
+	{
+		// printf("cannot access %s\n", pathname);
+		system(("mkdir \"" + ss.str() + "\"").c_str());
+	}
+	else if (info.st_mode & S_IFDIR)  // S_ISDIR() doesn't exist on my windows 
+	{
+		// printf("%s is a directory\n", pathname);
+	}
+	else
+	{
+		// printf("%s is no directory\n", pathname);
+		system(("mkdir \"" + ss.str() + "\"").c_str());
+	}
+
+	ss << separator() << *name << "_" << setw(digitCount) << setfill('0') << v_frame.frame_id << ".png";
+
+	// save file
+	cv::imwrite(ss.str(), v_frame.image);
+}
+
+void FrameExtractor::writeWindow(list<video_frame> &window, string &type, int digitCount)
+{
+	int64 start_id = window.front().frame_id;
+	int64 finish_id = window.back().frame_id;
+
+	ostringstream ss;
+	ss << *path << "sequence" << separator() << *name << separator() << type;
+
+	struct stat info;
+
+	if (stat(ss.str().c_str(), &info) != 0)
+	{
+		// printf("cannot access %s\n", pathname);
+		system(("mkdir \"" + ss.str() + "\"").c_str());
+	}
+	else if (info.st_mode & S_IFDIR)  // S_ISDIR() doesn't exist on my windows 
+	{
+		// printf("%s is a directory\n", pathname);
+	}
+	else
+	{
+		// printf("%s is no directory\n", pathname);
+		system(("mkdir \"" + ss.str() + "\"").c_str());
+	}
+
+	ss << separator() << *name; 
+	ss << "_" << setw(digitCount) << setfill('0') << start_id;
+	ss << "_" << setw(digitCount) << setfill('0') << finish_id;
+
+	int index = 0;
+	for (auto v_frame : window)
+	{
+		string file_path = ss.str() + "_" + to_string(index) + ".png";
+		// save file
+		cv::imwrite(file_path, v_frame.image);
+		index++;
+	}
 }
 
 int FrameExtractor::readDFile()
@@ -177,6 +275,8 @@ int FrameExtractor::readDFile()
 			infile.close();
 			return 3;
 		} // error
+
+		frame.mid = (frame.start + frame.end) / 2.0;
 
 		// to upper case
 		transform(frame.type.begin(), frame.type.end(), frame.type.begin(), ::toupper);
