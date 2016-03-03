@@ -4,6 +4,7 @@
 #include <string>
 #include <algorithm>
 #include <stdint.h>
+#include <sys/stat.h>
 
 #define GET_FILE_TEST(path) std::cout << path << " : " << getFileName(path) << std::endl
 #define GET_PARENT_TEST(path) std::cout << path << " : " << getParentPath(path) << std::endl
@@ -64,6 +65,34 @@ static std::string getParentPath(std::string path)
 	}
 
 	return path.substr(0, slash) + separator();
+}
+
+static void mkdirIfRequired(std::string &path)
+{
+	struct stat info;
+
+	if (stat(path.c_str(), &info) != 0)
+	{
+		// printf("cannot access %s\n", pathname);
+#if defined(_WIN32) || defined(_WIN64)
+		system(("mkdir \"" + path + "\"").c_str());
+#else
+		system(("mkdir -p \"" + path + "\"").c_str());
+#endif
+	}
+	else if (info.st_mode & S_IFDIR)  // S_ISDIR() doesn't exist on my windows 
+	{
+		// printf("%s is a directory\n", pathname);
+	}
+	else
+	{
+		// printf("%s is no directory\n", pathname);
+#if defined(_WIN32) || defined(_WIN64)
+		system(("mkdir \"" + path + "\"").c_str());
+#else
+		system(("mkdir -p \"" + path + "\"").c_str());
+#endif
+	}
 }
 
 // generic solution
