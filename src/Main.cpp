@@ -1,5 +1,7 @@
 #include <iostream>
+#ifdef VISUAL_LEAK_DETECTOR
 #include "vld.h"
+#endif
 #include "FrameExtractor.h"
 
 int main(int argc, char* argv[])
