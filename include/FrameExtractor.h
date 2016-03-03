@@ -14,7 +14,6 @@
 #include <deque>
 #include <opencv2/core/core.hpp>
 #include <opencv2/highgui/highgui.hpp>
-#include <opencv2/videoio/videoio.hpp>
 
 struct emotion_data;
 typedef std::vector<emotion_data> emotion_data_vec;
