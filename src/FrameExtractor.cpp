@@ -255,7 +255,7 @@ int FrameExtractor::processEMax()
 			temporalFrames.pop_front();
 		}
 
-		auto &it = curFrames.begin();
+		auto it = curFrames.begin();
 		while (it != curFrames.end())
 		{
 			cv::Rect bbox = it->bboxs[0];
@@ -316,7 +316,7 @@ int FrameExtractor::processEMax()
 	return 0;
 }
 
-void FrameExtractor::writeFrame(video_frame &v_frame, string &type, int digitCount)
+void FrameExtractor::writeFrame(const video_frame &v_frame, const string &type, int digitCount)
 {
 	ostringstream ss;
 	ss << *path << "static" << separator() << *name << separator() << type;
@@ -329,7 +329,7 @@ void FrameExtractor::writeFrame(video_frame &v_frame, string &type, int digitCou
 	cv::imwrite(ss.str(), v_frame.image);
 }
 
-void FrameExtractor::writeWindow(list<video_frame> &window, string &type, int digitCount, temporal_frame *temporalFrame)
+void FrameExtractor::writeWindow(const list<video_frame> &window, const string &type, int digitCount, temporal_frame *temporalFrame)
 {
 	int64 start_id = window.front().frame_id;
 	int64 finish_id = window.back().frame_id;
@@ -344,7 +344,7 @@ void FrameExtractor::writeWindow(list<video_frame> &window, string &type, int di
 	ss << "_" << setw(digitCount) << setfill('0') << finish_id;
 
 	int index = 0;
-	for (auto &v_frame : window)
+	for (const auto &v_frame : window)
 	{
 		string file_path = ss.str() + "_" + to_string(index) + ".png";
 		// save file
@@ -552,13 +552,18 @@ int FrameExtractor::readEFile()
 
 void FrameExtractor::selectFrames()
 {
-	for (auto& it = data.begin(); it != data.end(); it++)
+	for (auto it = data.begin(); it != data.end(); it++)
 	{
-		auto &e_data_vec = it->second;
+		/* const auto &e_data_vec = it->second;
 		
 		for (int j = 0; j < e_data_vec.size(); j++)
 		{
 			selectFrames(e_data_vec[j]);
+		}
+		*/
+		for (int j = 0; j < it->second.size(); j++)
+		{
+			selectFrames(it->second[j]);
 		}
 	}
 
@@ -575,10 +580,10 @@ void FrameExtractor::selectFrames(emotion_data& e_data)
 	e_data.average = e_data.average / e_data.count;
 
 	int faceId = e_data.faceId;
-	string &type = e_data.type;
-	vector<int> &frameIds = e_data.frameIds;
-	vector<double> &values = e_data.values;
-	vector<cv::Rect> &bboxs = e_data.bboxs;
+	const string &type = e_data.type;
+	const vector<int> &frameIds = e_data.frameIds;
+	const vector<double> &values = e_data.values;
+	const vector<cv::Rect> &bboxs = e_data.bboxs;
 	double minVal = e_data.average < e_data.max / 2 ? e_data.max / 2 : e_data.average;
 
 	deque<double> meanList;
@@ -636,7 +641,7 @@ void FrameExtractor::selectFrames(emotion_data& e_data)
 			big = &tFrames[i];
 			continue;
 		}
-		temporal_frame &current = tFrames[i];
+		const temporal_frame &current = tFrames[i];
 		if (abs(big->startFrame - current.startFrame) <= WINDOW_SIZE * 2)
 		{
 			if (big->score < current.score)

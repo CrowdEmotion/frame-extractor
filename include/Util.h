@@ -67,7 +67,7 @@ static std::string getParentPath(std::string path)
 	return path.substr(0, slash) + separator();
 }
 
-static void mkdirIfRequired(std::string &path)
+static void mkdirIfRequired(const std::string &path)
 {
 	struct stat info;
 
@@ -107,10 +107,9 @@ static int numDigits(T number)
 	}
 	return digits;
 }
-
 // partial specialization optimization for 32-bit numbers
 template<>
-static int numDigits(int32_t x)
+inline int numDigits(int32_t x)
 {
 	if (x == INTMAX_MIN) return 10 + 1;
 	if (x < 0) return numDigits(-x) + 1;
@@ -143,7 +142,7 @@ static int numDigits(int32_t x)
 
 // partial-specialization optimization for 8-bit numbers
 template <>
-static int numDigits(char n)
+inline int numDigits(char n)
 {
 	// if you have the time, replace this with a static initialization to avoid
 	// the initial overhead & unnecessary branch
@@ -155,6 +154,13 @@ static int numDigits(char n)
 	}
 	return x[n];
 }
+#ifndef _WIN32
+template <typename T, typename... Args>
+std::unique_ptr<T> make_unique(Args &&... args)
+{
+	return std::unique_ptr<T>(new T(std::forward<Args>(args)...));
+}
+#endif
 
 static void runTests()
 {

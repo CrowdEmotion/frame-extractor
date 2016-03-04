@@ -26,7 +26,7 @@ struct frame
 
 struct video_frame
 {
-	video_frame(cv::Mat &img, double time, int64 id)
+	video_frame(const cv::Mat &img, double time, int64 id)
 	{
 		image = img;
 		start_time = time;
@@ -119,9 +119,9 @@ private:
 
 	void selectFrames(emotion_data& e_data);
 
-	void writeFrame(video_frame&, std::string& type, int digitCount);
+	void writeFrame(const video_frame&, const std::string& type, int digitCount);
 
-	void writeWindow(std::list<video_frame>&, std::string& type, int digitCount, temporal_frame *temporalFrame = NULL);
+	void writeWindow(const std::list<video_frame>&, const std::string& type, int digitCount, temporal_frame *temporalFrame = NULL);
 };
 
 template <class T>
